@@ -61,7 +61,18 @@ class CrossValidation(object):
             return [(X, y)]
 
         # >> YOUR CODE HERE
-        folds = ...
+        fold_size = int(X.shape[0] / self.k)
+        fold_size_first = fold_size
+        if X.shape[0] % self.k != 0:
+            fold_size_first = X.shape[0] % self.k + fold_size
+        folds = []
+        folds.append((X[0:fold_size_first], y[0:fold_size_first]))
+        
+        i = 1
+        while i < self.k:
+            folds.append((X[fold_size_first:fold_size_first+fold_size], y[fold_size_first:fold_size_first+fold_size]))
+            fold_size_first += fold_size
+            i += 1
         # << END OF YOUR CODE
 
         return folds
@@ -85,11 +96,16 @@ class CrossValidation(object):
         X_train, y_train = [], []
 
         # >> YOUR CODE HERE
-        X_val = ...
-        y_val = ...
+        X_val = folds[use_as_valid][0]
+        y_val = folds[use_as_valid][1]
 
-        X_train = ...
-        y_train = ...
+        i = 0
+        while i < self.k:
+            if i != use_as_valid:
+                X_train.extend(folds[i][0])
+                y_train.extend(folds[i][1])
+            i += 1
+
         # << END OF YOUR CODE
 
         return (X_train, y_train), (X_val, y_val)
@@ -131,11 +147,14 @@ class CrossValidation(object):
 
         for i in range(self.k):
             # >>> YOUR CODE HERE (you may need to use the clf)
-            (X_train, y_train), (X_val, y_val) = ...
-            train_score = ...
-            val_score = ...
-            train_accs = ...
-            val_accs = ...
+            (X_train, y_train), (X_val, y_val) = self.train_valid_split(folds, i)
+            # print(i)
+            # print(len(X_train), len(y_train), len(X_val), len(y_val)) #testing
+            clf.fit(X, y)
+            train_score = clf.score(X_train, y_train)
+            val_score = clf.score(X_val, y_val)
+            train_accs.append(train_score)
+            val_accs.append(val_score)
             # << END OF YOUR CODE
             print(
                 f'    fold {i} as val: train_acc={train_score:.5f}, val_acc={val_score:.5f}')

@@ -63,11 +63,15 @@ def find_best_param(X: np.ndarray,
         print(f'{param_name} = {val}')
 
         # >>> YOUR CODE HERE
-        train_accs, val_accs = ...
-        train_accs_cv[val] = ...
-        val_accs_cv[val] = ...
+        CV = CrossValidation(k)
+        train_accs, val_accs = CrossValidation.cross_val_score(CV, clf, X, y)
+        train_accs_cv[val] = train_accs
+        val_accs_cv[val] = val_accs
 
-        best_param = ...
+    for key in val_accs_cv:
+        if best_acc < sum(val_accs_cv[key]):
+            best_acc = sum(val_accs_cv[key])
+            best_param = key
         # <<< END YOUR CODE
 
     return train_accs_cv, val_accs_cv, best_param
