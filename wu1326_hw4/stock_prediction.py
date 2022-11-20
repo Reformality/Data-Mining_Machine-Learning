@@ -78,7 +78,7 @@ def pre_process(file_path: str) -> dict:
     stock_dict = dict()
     for stock in stocks:
         # >>> YOUR CODE HERE
-        stock_dict[stock] = ...
+        stock_dict[stock] = df[df['Stock'] == stock].sort_values('Date')
         # <<< END YOUR CODE
 
     return stock_dict
@@ -155,8 +155,18 @@ def split_stock(stock_info: pd.DataFrame) -> tuple:
     y = []
 
     # >>> YOUR CODE HERE
-    x_train_stock, x_val_stock, y_train_stock, y_val_stock = ...
-    ...
+    valList = stock_info['Close'].tolist()
+    size = len(valList)
+    splitPos = int((size - 5) * 0.7)
+
+    for i in range(size - 5):
+        x.append([valList[i],valList[i+1],valList[i+2],valList[i+3],valList[i+4]])
+        y.append(valList[i+5])
+    
+    x_train_stock = np.array(x[0:splitPos])
+    x_val_stock = np.array(x[splitPos:])
+    y_train_stock = np.array(y[0:splitPos])
+    y_val_stock = np.array(y[splitPos:])
 
     # <<< END YOUR CODE
 
@@ -192,14 +202,25 @@ def get_train_valid(stock_dict: dict) -> tuple:
 
     """
     # >>> YOUR CODE HERE
-    x_train, y_train, x_val, y_val = ...
+    x_train, y_train, x_val, y_val = np.array([]), np.array([]), np.array([]), np.array([])
+
 
     for stock in stock_dict:
-        
-        x_train = ...
-        y_train = ...
-        x_val = ...
-        y_val = ...
+        # test5 = np.append(test5, x_val_stock)
+        x_train_stock, y_train_stock, x_val_stock, y_val_stock = split_stock(stock_dict[stock])
+
+
+        x_train = np.append(x_train, x_train_stock)
+        y_train = np.append(y_train, y_train_stock)
+        x_val = np.append(x_val, x_val_stock)
+        y_val = np.append(y_val, y_val_stock)
+
+    
+    x_train = np.reshape(x_train, (int(np.shape(x_train)[0]/5), 5))
+    x_val = np.reshape(x_val, (int(np.shape(x_val)[0]/5), 5))
+
+    # test7 = np.reshape(test5, (test6, 5))
+    # test6 = int(np.shape(test5)[0] / 5)
 
     # <<< END YOUR CODE
     return (x_train, y_train, x_val, y_val)
@@ -221,7 +242,18 @@ def my_NLLloss(pred: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     """
 
     # >>> YOUR CODE HERE
-    nll_loss = ...
+    nll_loss = 0
+
+    for i in range(pred.shape[0]):
+    # for i in range(1):
+        # print(pred[i], y[i])
+        # nll_loss += torch.log(torch.sqrt(torch.tensor(2*pi))) + 0.5*torch.log(pred[i][1]) + ((y[i]-pred[i][0])**2) / (2*torch.exp(torch.log(pred[i][1])))
+        nll_loss += torch.log(torch.sqrt(torch.tensor(2*pi))) + 0.5*pred[i][1] + ((y[i]-pred[i][0])**2) / (2*torch.exp(pred[i][1]))
+        
+        # nll_loss += torch.log(torch.sqrt(torch.tensor(2*pi)*pred[i][1])) + ((y[i]-pred[i][0])**2) / (2*pred[i][1])
+        # print(nll_loss)
+    # print("finished for loop\n")
+    # nll_loss = ...
     # <<< END YOUR CODE
     return nll_loss
 
@@ -252,6 +284,12 @@ def train(data: tuple, max_epochs: int = 200, seed=12345) -> tuple:
     net = MyNetwork(5, 100, 2)
 
     x_train, y_train, x_val, y_val = data
+
+    x_train = torch.from_numpy(x_train)
+    y_train = torch.from_numpy(y_train)
+    x_val = torch.from_numpy(x_val)
+    y_val = torch.from_numpy(y_val)
+
     x_train.to(device)
     y_train.to(device)
     x_val.to(device)
@@ -262,13 +300,30 @@ def train(data: tuple, max_epochs: int = 200, seed=12345) -> tuple:
     val_losses = []
 
     print('---------- Training has started: -------------')
-    optimizer = ... # DEFINE YOUR OPTIMIZER
+    optimizer = optim.Adam(net.parameters(), lr=0.001) # DEFINE YOUR OPTIMIZER
 
     for epoch in iterator: # DO NOT CHANGE THIS LINE
         # >>> YOUR CODE HERE
-        train_loss = ...
-        val_loss = ...
-        ...
+        # optimizer.zero_grad()
+
+        train_out = net(x_train.float())
+        val_out = net(x_val.float())
+
+        train_loss = my_NLLloss(train_out, y_train)
+        val_loss = my_NLLloss(val_out, y_val)
+        
+        # print(round(train_loss.item(), 1),round(val_loss.item(), 1))
+
+        optimizer.zero_grad()
+        # net.zero_grad()
+        train_loss.backward()
+        val_loss.backward()
+        # print(round(train_loss.item(), 1),round(val_loss.item(), 1))
+        optimizer.step()
+
+        # for f in net.parameters():
+        #     f.data.sub_(f.grad.data * 0.01)
+
 
         # <<< END YOUR CODE
 
@@ -360,5 +415,5 @@ if __name__ == '__main__':
 
     data = get_train_valid(stock_dict)
 
-    net, train_loss, val_loss = train(data, max_epochs=1000)
+    net, train_loss, val_loss = train(data, max_epochs=1000) #1000
     plot_predictions(net, stock_dict)

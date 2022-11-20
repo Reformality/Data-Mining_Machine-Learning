@@ -16,9 +16,9 @@ class MyNetwork(nn.Module):
             third parameter: output dimension
         """
         
-        self.fc1 = ...
-        self.relu = ...
-        self.fc2 = ...
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_dim, output_dim)
     
     def forward(self, x):
         '''
@@ -26,6 +26,11 @@ class MyNetwork(nn.Module):
         the final output.
         '''
         
-        out = ...
+        out = self.fc1(x)
+        out = self.relu(out)
+        out = self.fc2(out)
+
+        # print(out)
+
         return out
     
