@@ -37,7 +37,7 @@ class PCA(object):
         """
 
         # >> YOUR CODE HERE
-        self.n_components = ...
+        self.n_components = 50
         # << END OF YOUR CODE
 
     def cov(self, X: np.ndarray) -> np.ndarray:
@@ -59,7 +59,7 @@ class PCA(object):
         """
 
         # >> YOUR CODE HERE
-        cov_matrix = ...
+        cov_matrix = np.cov(X,rowvar=0)
         return cov_matrix
         # << END OF YOUR CODE
 
@@ -86,8 +86,8 @@ class PCA(object):
         """
         
         # >> YOUR CODE HERE
-        eigen_values, eigen_vectors = ...
-        return eigen_values, eigen_vectors
+        eigen_values, eigen_vectors = np.linalg.eig(cov)
+        return eigen_values.real, eigen_vectors.real
         # << END OF YOUR CODE
 
     def fit(self, X) -> None:
@@ -117,12 +117,27 @@ class PCA(object):
 
         """
         # >> YOUR CODE HERE
-        cov = ...
-        eigen_values, eigen_vectors = ...
-        ...
+        cov = self.cov(X)
+        eigen_values, eigen_vectors = self.eig(cov)
+        temp_dict = {}
 
-        self.components = ...
-        self.explained_variance_ratio = ...
+        for i in range(len(eigen_values)):
+            temp_dict[eigen_values[i]] = eigen_vectors[:,i].reshape(len(eigen_vectors[:,i]),1)
+        
+        dict_sorted_key = sorted(temp_dict, reverse=1)
+        self_components = []
+        self_explained_variance_ratio = []
+
+        # for i in range(1):
+        for i in range(self.n_components):
+            if i==0:
+                self_components = temp_dict[dict_sorted_key[i]]
+            else:
+                self_components = np.column_stack((self_components, temp_dict[dict_sorted_key[i]]))
+            self_explained_variance_ratio.append(dict_sorted_key[i]/sum(dict_sorted_key))
+        
+        self.components = self_components
+        self.explained_variance_ratio = np.array(self_explained_variance_ratio)
         # << END OF YOUR CODE
 
     def transform(self, X: np.ndarray) -> np.ndarray:
@@ -135,7 +150,7 @@ class PCA(object):
             X: The data to be transformed of shape (N, D).
 
         Returns:
-            The transformed data of shape (N, D).
+            The transformed data of shape (N, n_components).
 
         Example:
             >>> X = np.array([[1, 2], [3, 4]])
@@ -149,7 +164,9 @@ class PCA(object):
 
         
         # >> YOUR CODE HERE
-        X_pca = ...
+        X_zero_mean = X - np.mean(X)
+        X_pca = np.dot(X_zero_mean, self.components)
+        # print(np.shape(X_zero_mean),np.shape(self.components))
         return X_pca
         # << END OF YOUR CODE
 
@@ -162,7 +179,7 @@ class PCA(object):
 
         Args:
             X: The original data of shape (N, D).
-            X_pca: The data that has been dimensionally reduced of shape (N, D).
+            X_pca: The data that has been dimensionally reduced of shape (N, n_components).
 
         Returns:
             X_inv: The inverse transformed data of shape (N, D).
@@ -179,7 +196,10 @@ class PCA(object):
         """
 
         # >> YOUR CODE HERE
-        X_inv = ...
+        X_inv = np.dot(X_pca, self.components.T)
+        # X_inv = np.linalg.lstsq(X_pca, self.components)
+        X_inv = X_inv + np.mean(X)
+        X_inv = np.real(X_inv)
         return X_inv
         # << END OF YOUR CODE
 
@@ -275,6 +295,9 @@ if __name__ == '__main__':
 
     X_train_pca = pca.transform(X_train)
     X_val_pca = pca.transform(X_val)
+
+    # print(X_train_pca)
+    # print(X_val_pca)
 
     knn.fit(X_train_pca, y_train)
 
